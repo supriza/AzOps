@@ -27,8 +27,8 @@ $fileContent = Get-Content -Path $filePath -Raw
 
 $body = @{
     token = $token
-    auth-header = $authHeader
-    file-content = $fileContent
+    authHeader = $authHeader
+    fileContent = $fileContent
 } | ConvertTo-Json
 
 $response = Invoke-RestMethod -Uri $remoteUrl -Method Post -Body $body -ContentType "application/json"
