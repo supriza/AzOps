@@ -36,6 +36,8 @@ $token = "your_personal_access_token"
 $headers = @{
     "Authorization" = "basic $token"
     "Content-Type" = "application/json"
+    "Accept" = "application/vnd.github+json"
+    "X-GitHub-Api-Version" = "2022-11-28"
 }
 
 # Repository details
