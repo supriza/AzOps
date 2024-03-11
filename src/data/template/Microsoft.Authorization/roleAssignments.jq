@@ -1,0 +1,1 @@
+del(.properties.createdOn, .properties.updatedOn, .properties.createdBy, .properties.updatedBy)

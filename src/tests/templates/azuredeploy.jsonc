@@ -1,0 +1,896 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-08-01/managementGroupDeploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "tenantId": {
+            "type": "string"
+        },
+        "subscriptionId": {
+            "type": "string"
+        }
+    },
+    "functions": [],
+    "variables": {
+        "apiVersion": "2021-04-01",
+        "displayName": "Test"
+    },
+    "resources": [
+        // Management Group - Test
+        {
+            "type": "Microsoft.Management/managementGroups",
+            "name": "[guid(variables('displayName'))]",
+            "apiVersion": "[variables('apiVersion')]",
+            "scope": "/",
+            "properties": {
+                "displayName": "[variables('displayName')]",
+                "details": {
+                    "parent": {
+                        "id": "[resourceId('Microsoft.Management/managementGroups', parameters('tenantId'))]"
+                    }
+                }
+            }
+        },
+        // Policy Definition and SetDefinition - Test Root
+        {
+            "type": "Microsoft.Resources/deployments",
+            "apiVersion": "2020-10-01",
+            "name": "Test-Policy-Definition-Nested",
+            "location": "northeurope",
+            "dependsOn": [
+                "[resourceId('Microsoft.Management/managementGroups', guid('Test'))]"
+            ],
+            "properties": {
+                "mode": "Incremental",
+                "template": {
+                    "$schema": "https://schema.management.azure.com/schemas/2019-08-01/managementGroupDeploymentTemplate.json#",
+                    "contentVersion": "1.0.0.0",
+                    "resources": [
+                        {
+                        	"type": "Microsoft.Authorization/policyDefinitions",
+                        	"apiVersion": "2021-06-01",
+                        	"name": "TestPolicyDefinition",
+                        	"properties": {
+                        		"displayName": "AzOps - Deploy network watcher when virtual networks are created",
+                        		"policyType": "Custom",
+                        		"mode": "Indexed",
+                        		"description": "AzOps - This policy creates a network watcher resource in regions with virtual networks. You need to ensure existence of a resource group named networkWatcherRG, which will be used to deploy network watcher instances.",
+                        		"metadata": {
+                        			"version": "1.0.0",
+                        			"category": "Network"
+                        		},
+                        		"parameters": {},
+                        		"policyRule": {
+                        			"if": {
+                        				"field": "type",
+                        				"equals": "Microsoft.Network/virtualNetworks"
+                        			},
+                        			"then": {
+                        				"effect": "DeployIfNotExists",
+                        				"details": {
+                        					"type": "Microsoft.Network/networkWatchers",
+                        					"resourceGroupName": "networkWatcherRG",
+                        					"existenceCondition": {
+                        						"field": "location",
+                        						"equals": "westeurope"
+                        					},
+                        					"roleDefinitionIds": [
+                        						"/providers/microsoft.authorization/roleDefinitions/4d97b98b-1d4f-4787-a291-c67834d212e7"
+                        					],
+                        					"deployment": {
+                        						"properties": {
+                        							"mode": "incremental",
+                        							"template": {
+                        								"$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json",
+                        								"contentVersion": "1.0.0.0",
+                        								"parameters": {},
+                        								"resources": [{
+                        									"apiVersion": "2016-09-01",
+                        									"type": "Microsoft.Network/networkWatchers",
+                        									"name": "azops-networkwatcher",
+                        									"location": "westeurope"
+                        								}]
+                        							},
+                        							"parameters": {
+                        								"location": {
+                        									"value": "westeurope"
+                        								}
+                        							}
+                        						}
+                        					}
+                        				}
+                        			}
+                        		}
+                        	}
+                        },
+                        {
+                        	"type": "Microsoft.Authorization/policySetDefinitions",
+                        	"apiVersion": "2021-06-01",
+                        	"name": "TestPolicySetDefinition",
+                        	"properties": {
+                        		"displayName": "AzOps - Flow logs should be configured and enabled for every network security group",
+                        		"description": "AzOps - Audit for network security groups to verify if flow logs are configured and if flow log status is enabled. Enabling flow logs allows to log information about IP traffic flowing through network security group. It can be used for optimizing network flows, monitoring throughput, verifying compliance, detecting intrusions and more.",
+                        		"policyType": "Custom",
+                        		"metadata": {
+                        			"version": "1.0.0",
+                        			"category": "Network"
+                        		},
+                        		"policyDefinitions": [{
+                        				"policyDefinitionReferenceId": "NetworkSecurityGroup_FlowLog_Audit",
+                        				"policyDefinitionId": "/providers/Microsoft.Authorization/policyDefinitions/c251913d-7d24-4958-af87-478ed3b9ba41",
+                        				"parameters": {
+                        					"effect": {
+                        						"value": "Audit"
+                        					}
+                        				},
+                        				"groupNames": []
+                        			},
+                        			{
+                        				"policyDefinitionReferenceId": "NetworkWatcherFlowLog_Enabled_Audit",
+                        				"policyDefinitionId": "/providers/Microsoft.Authorization/policyDefinitions/27960feb-a23c-4577-8d36-ef8b5f35e0be",
+                        				"parameters": {
+                        					"effect": {
+                        						"value": "Audit"
+                        					}
+                        				},
+                        				"groupNames": []
+                        			}
+                        		],
+                        		"policyDefinitionGroups": []
+                        	}
+                        },
+                        {
+                        	"type": "Microsoft.Authorization/policyDefinitions",
+                        	"apiVersion": "2021-06-01",
+                        	"name": "TestPolicyDefinitionDep",
+                        	"properties": {
+                        		"displayName": "AzOpsDep - Deploy network watcher when virtual networks are created",
+                        		"policyType": "Custom",
+                        		"mode": "Indexed",
+                        		"description": "AzOpsDep - This policy creates a network watcher resource in regions with virtual networks. You need to ensure existence of a resource group named networkWatcherRG, which will be used to deploy network watcher instances.",
+                        		"metadata": {
+                        			"version": "1.0.0",
+                        			"category": "Network"
+                        		},
+                        		"parameters": {},
+                        		"policyRule": {
+                        			"if": {
+                        				"field": "type",
+                        				"equals": "Microsoft.Network/virtualNetworks"
+                        			},
+                        			"then": {
+                        				"effect": "DeployIfNotExists",
+                        				"details": {
+                        					"type": "Microsoft.Network/networkWatchers",
+                        					"resourceGroupName": "networkWatcherRG",
+                        					"existenceCondition": {
+                        						"field": "location",
+                        						"equals": "northeurope"
+                        					},
+                        					"roleDefinitionIds": [
+                        						"/providers/microsoft.authorization/roleDefinitions/4d97b98b-1d4f-4787-a291-c67834d212e7"
+                        					],
+                        					"deployment": {
+                        						"properties": {
+                        							"mode": "incremental",
+                        							"template": {
+                        								"$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json",
+                        								"contentVersion": "1.0.0.0",
+                        								"parameters": {},
+                        								"resources": [{
+                        									"apiVersion": "2016-09-01",
+                        									"type": "Microsoft.Network/networkWatchers",
+                        									"name": "azopsDep-networkwatcher",
+                        									"location": "westeurope"
+                        								}]
+                        							},
+                        							"parameters": {
+                        								"location": {
+                        									"value": "westeurope"
+                        								}
+                        							}
+                        						}
+                        					}
+                        				}
+                        			}
+                        		}
+                        	}
+                        },
+                        {
+                            "type": "Microsoft.Authorization/policyAssignments",
+                            "apiVersion": "2021-06-01",
+                            "name": "TestPolicyAssignmentDep",
+                            "location": "westeurope",
+                            "identity": {
+                                "type": "SystemAssigned"
+                            },
+                            "properties": {
+                                "policyDefinitionId": "[concat('/providers/Microsoft.Management/managementGroups/', guid('Test'), '/providers/Microsoft.Authorization/policyDefinitions/TestPolicyDefinitionDep')]"
+                            },
+                            "dependsOn": [
+                                "TestPolicyDefinition"
+                            ]
+                        },
+                        {
+                        	"type": "Microsoft.Authorization/policySetDefinitions",
+                        	"apiVersion": "2021-06-01",
+                        	"name": "TestPolicySetDefinitionDep",
+                        	"properties": {
+                        		"displayName": "AzOpsDep - Flow logs should be configured and enabled for every network security group",
+                        		"description": "AzOpsDep - Audit for network security groups to verify if flow logs are configured and if flow log status is enabled. Enabling flow logs allows to log information about IP traffic flowing through network security group. It can be used for optimizing network flows, monitoring throughput, verifying compliance, detecting intrusions and more.",
+                        		"policyType": "Custom",
+                        		"metadata": {
+                        			"version": "1.0.0",
+                        			"category": "Network"
+                        		},
+                        		"policyDefinitions": [{
+                        				"policyDefinitionReferenceId": "NetworkSecurityGroup_FlowLog_Audit",
+                        				"policyDefinitionId": "/providers/Microsoft.Authorization/policyDefinitions/c251913d-7d24-4958-af87-478ed3b9ba41",
+                        				"parameters": {
+                        					"effect": {
+                        						"value": "Audit"
+                        					}
+                        				},
+                        				"groupNames": []
+                        			},
+                        			{
+                        				"policyDefinitionReferenceId": "NetworkWatcherFlowLog_Enabled_Audit",
+                        				"policyDefinitionId": "/providers/Microsoft.Authorization/policyDefinitions/27960feb-a23c-4577-8d36-ef8b5f35e0be",
+                        				"parameters": {
+                        					"effect": {
+                        						"value": "Audit"
+                        					}
+                        				},
+                        				"groupNames": []
+                        			}
+                        		],
+                        		"policyDefinitionGroups": []
+                        	}
+                        },
+                        {
+                            "type": "Microsoft.Authorization/policyAssignments",
+                            "apiVersion": "2021-06-01",
+                            "name": "TestPolicyAssDepDef",
+                            "properties": {
+                                "policyDefinitionId": "[concat('/providers/Microsoft.Management/managementGroups/', guid('Test'), '/providers/Microsoft.Authorization/policySetDefinitions/TestPolicySetDefinitionDep')]"
+                            },
+                            "dependsOn": [
+                                "TestPolicySetDefinitionDep"
+                            ]
+                        },
+                        {
+                        	"type": "Microsoft.Authorization/policyDefinitions",
+                        	"apiVersion": "2021-06-01",
+                        	"name": "TestPolicyDefinitionDe2",
+                        	"properties": {
+                        		"displayName": "AzOpsDep2 - Deploy network watcher when virtual networks are created",
+                        		"policyType": "Custom",
+                        		"mode": "Indexed",
+                        		"description": "AzOpsDep2 - This policy creates a network watcher resource in regions with virtual networks. You need to ensure existence of a resource group named networkWatcherRG, which will be used to deploy network watcher instances.",
+                        		"metadata": {
+                        			"version": "1.0.0",
+                        			"category": "Network"
+                        		},
+                        		"parameters": {},
+                        		"policyRule": {
+                        			"if": {
+                        				"field": "type",
+                        				"equals": "Microsoft.Network/virtualNetworks"
+                        			},
+                        			"then": {
+                        				"effect": "DeployIfNotExists",
+                        				"details": {
+                        					"type": "Microsoft.Network/networkWatchers",
+                        					"resourceGroupName": "networkWatcherRG",
+                        					"existenceCondition": {
+                        						"field": "location",
+                        						"equals": "northeurope"
+                        					},
+                        					"roleDefinitionIds": [
+                        						"/providers/microsoft.authorization/roleDefinitions/4d97b98b-1d4f-4787-a291-c67834d212e7"
+                        					],
+                        					"deployment": {
+                        						"properties": {
+                        							"mode": "incremental",
+                        							"template": {
+                        								"$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json",
+                        								"contentVersion": "1.0.0.0",
+                        								"parameters": {},
+                        								"resources": [{
+                        									"apiVersion": "2016-09-01",
+                        									"type": "Microsoft.Network/networkWatchers",
+                        									"name": "azopsDep-networkwatcher",
+                        									"location": "westeurope"
+                        								}]
+                        							},
+                        							"parameters": {
+                        								"location": {
+                        									"value": "westeurope"
+                        								}
+                        							}
+                        						}
+                        					}
+                        				}
+                        			}
+                        		}
+                        	}
+                        },
+                        {
+                        	"type": "Microsoft.Authorization/policySetDefinitions",
+                        	"apiVersion": "2021-06-01",
+                        	"name": "TestPolicySetDefinitionDe2",
+                            "dependsOn": [
+                                "TestPolicyDefinitionDe2"
+                            ],
+                        	"properties": {
+                        		"displayName": "AzOpsDep2 - Flow logs should be configured and enabled for every network security group",
+                        		"description": "AzOpsDep2 - Audit for network security groups to verify if flow logs are configured and if flow log status is enabled. Enabling flow logs allows to log information about IP traffic flowing through network security group. It can be used for optimizing network flows, monitoring throughput, verifying compliance, detecting intrusions and more.",
+                        		"policyType": "Custom",
+                        		"metadata": {
+                        			"version": "1.0.0",
+                        			"category": "Network"
+                        		},
+                        		"policyDefinitions": [{
+                        				"policyDefinitionId": "[concat('/providers/Microsoft.Management/managementGroups/', guid('Test'), '/providers/Microsoft.Authorization/policyDefinitions/TestPolicyDefinitionDe2')]",
+                        				"groupNames": []
+                        			}
+                        		],
+                        		"policyDefinitionGroups": []
+                        	}
+                        }
+                    ],
+                    "outputs": {}
+                }
+            },
+            "scope": "[resourceId('Microsoft.Management/managementGroups/', guid('Test'))]"
+        },
+        // Management Group - Test - Platform
+        {
+            "type": "Microsoft.Management/managementGroups",
+            "name": "[guid('Platform')]",
+            "apiVersion": "[variables('apiVersion')]",
+            "scope": "/",
+            "properties": {
+                "displayName": "Platform",
+                "details": {
+                    "parent": {
+                        "id": "[resourceId('Microsoft.Management/managementGroups', guid(variables('displayName')))]"
+                    }
+                }
+            },
+            "dependsOn": [
+                "[resourceId('Microsoft.Management/managementGroups', guid(variables('displayName')))]"
+            ]
+        },
+        // Management Group - Test - Platform - Connectivity
+        {
+            "type": "Microsoft.Management/managementGroups",
+            "name": "[guid('Connectivity')]",
+            "apiVersion": "[variables('apiVersion')]",
+            "scope": "/",
+            "properties": {
+                "displayName": "Connectivity",
+                "details": {
+                    "parent": {
+                        "id": "[resourceId('Microsoft.Management/managementGroups', guid('Platform'))]"
+                    }
+                }
+            },
+            "dependsOn": [
+                "[resourceId('Microsoft.Management/managementGroups', guid('Platform'))]"
+            ]
+        },
+        // Management Group - Test - Platform - Management
+        {
+            "type": "Microsoft.Management/managementGroups",
+            "name": "[guid('Management')]",
+            "apiVersion": "[variables('apiVersion')]",
+            "scope": "/",
+            "properties": {
+                "displayName": "Management",
+                "details": {
+                    "parent": {
+                        "id": "[resourceId('Microsoft.Management/managementGroups', guid('Platform'))]"
+                    }
+                }
+            },
+            "dependsOn": [
+                "[resourceId('Microsoft.Management/managementGroups', guid('Platform'))]"
+            ]
+        },
+        // Policy Assignment - Test - Platform - Management
+        {
+            "type": "Microsoft.Resources/deployments",
+            "apiVersion": "2020-10-01",
+            "name": "Test-Policy-Assignment-Nested",
+            "location": "northeurope",
+            "dependsOn": [
+                "[resourceId('Microsoft.Management/managementGroups', guid('Management'))]"
+            ],
+            "properties": {
+                "mode": "Incremental",
+                "template": {
+                    "$schema": "https://schema.management.azure.com/schemas/2019-08-01/managementGroupDeploymentTemplate.json#",
+                    "contentVersion": "1.0.0.0",
+                    "resources": [
+                        {
+                            "type": "Microsoft.Authorization/policyAssignments",
+                            "apiVersion": "2021-06-01",
+                            "name": "TestPolicyAssignment",
+                            "properties": {
+                                "metadata": {
+                                    "customkey": "customvalue",
+                                },
+                                "policyDefinitionId": "/providers/Microsoft.Authorization/policyDefinitions/0a914e76-4921-4c19-b460-a2d36003525a"
+                            }
+                        }
+                    ],
+                    "outputs": {}
+                }
+            },
+            "scope": "[resourceId('Microsoft.Management/managementGroups/', guid('Management'))]"
+        },
+        // Empty 'delay' deployments to ensure roleAssignments have been replicated before submitting subscription deployments
+        {
+            "type": "Microsoft.Resources/deployments",
+            "apiVersion": "2021-04-01",
+            "name": "[concat('delayFor', copyIndex())]",
+            "location": "[deployment().location]",
+            "scope": "/",
+            "dependsOn": [
+                "[resourceId('Microsoft.Management/managementGroups', guid('Management'))]"
+            ],
+            "copy": {
+                "batchSize": 1,
+                "count": 35,
+                "mode": "Serial",
+                "name": "waitingCompletion"
+            },
+            "properties": {
+                "mode": "Incremental",
+                "template": {
+                    "$schema": "https://schema.management.azure.com/schemas/2019-08-01/managementGroupDeploymentTemplate.json#",
+                    "contentVersion": "1.0.0.0",
+                    "parameters": {},
+                    "resources": [],
+                    "outputs": {}
+                }
+            }
+        },
+        // Subscription - Test - Platform - Management - Subscription-0
+        {
+            "type": "Microsoft.Resources/deployments",
+            "apiVersion": "2020-10-01",
+            "name": "AzOps-Test-Move-Subscription",
+            "location": "northeurope",
+            "dependsOn": [
+                "[resourceId('Microsoft.Management/managementGroups', guid('Management'))]"
+            ],
+            "properties": {
+                "mode": "Incremental",
+                "template": {
+                    "$schema": "https://schema.management.azure.com/schemas/2019-08-01/managementGroupDeploymentTemplate.json#",
+                    "contentVersion": "1.0.0.0",
+                    "resources": [
+                        {
+                            "type": "Microsoft.Management/managementGroups/subscriptions",
+                            "name": "[concat(guid('Management'), '/', parameters('subscriptionId'))]",
+                            "apiVersion": "2020-05-01"
+                        }
+                    ],
+                    "outputs": {}
+                }
+            },
+            "scope": "/"
+        },
+        // Resource Group, Role Assignment, Policy Exemption and Route Table - Test - Platform - Management - Subscription-0 - App1-azopsrg
+        {
+            "type": "Microsoft.Resources/deployments",
+            "apiVersion": "2020-10-01",
+            "name": "AzOps-Tests-Nested",
+            "subscriptionId": "[parameters('subscriptionId')]",
+            "location": "northeurope",
+            "dependsOn": [
+                "[resourceId('Microsoft.Resources/deployments', 'Test-Policy-Assignment-Nested')]",
+                "[resourceId('Microsoft.Resources/deployments', 'AzOps-Test-Move-Subscription')]",
+                "waitingCompletion"
+            ],
+            "properties": {
+                "mode": "Incremental",
+                "template": {
+                    "$schema": "https://schema.management.azure.com/schemas/2018-05-01/subscriptionDeploymentTemplate.json#",
+                    "contentVersion": "1.0.0.0",
+                    "resources": [
+                        {
+                            "type": "Microsoft.Resources/resourceGroups",
+                            "apiVersion": "2019-10-01",
+                            "name": "App1-azopsrg",
+                            "location": "northeurope"
+                        },
+                        {
+                            "type": "Microsoft.Resources/resourceGroups",
+                            "apiVersion": "2019-10-01",
+                            "name": "Lock1-azopsrg",
+                            "location": "northeurope"
+                        },
+                        {
+                            "type": "Microsoft.Resources/resourceGroups",
+                            "apiVersion": "2019-10-01",
+                            "name": "Lock2-azopsrg",
+                            "location": "northeurope"
+                        },
+                        {
+                            "type": "Microsoft.Resources/resourceGroups",
+                            "apiVersion": "2019-10-01",
+                            "name": "ParallelDeploy-azopsrg",
+                            "location": "northeurope"
+                        },
+                        {
+                            "type": "Microsoft.Authorization/roleAssignments",
+                            "apiVersion": "2021-04-01-preview",
+                            "name": "[guid('RoleAssignmentTest')]",
+                            "properties": {
+                                "roleDefinitionId": "[concat('/subscriptions/', parameters('subscriptionId'), '/providers/Microsoft.Authorization/roleDefinitions/', 'acdd72a7-3385-48ef-bd42-f606fba81ae7')]",
+                                "principalId": "023e7c1c-1fa4-4818-bb78-0a9c5e8b0217",
+                                "principalType": "ServicePrincipal"
+                            }
+                        },
+                        {
+                            "type": "Microsoft.Authorization/policyExemptions",
+                            "apiVersion": "2020-07-01-preview",
+                            "name": "PolicyExemptionTest",
+                            "properties": {
+                                "displayName": "TestPolicyAssignment - PolicyExemptionTest",
+                                "exemptionCategory": "Waiver",
+                                "expiresOn": "",
+                                "metadata": {},
+                                "policyAssignmentId": "[concat('/providers/Microsoft.Management/managementGroups/', guid('Management'), '/providers/Microsoft.Authorization/policyAssignments/TestPolicyAssignment')]",
+                                "policyDefinitionReferenceIds": []
+                            }
+                        },
+                        {
+                            "type": "Microsoft.Resources/deployments",
+                            "apiVersion": "2019-10-01",
+                            "name": "RouteTableAndPolicy",
+                            "resourceGroup": "App1-azopsrg",
+                            "dependsOn": [
+                                "App1-azopsrg"
+                            ],
+                            "properties": {
+                                "mode": "Incremental",
+                                "expressionEvaluationOptions": {
+                                    "scope": "inner"
+                                },
+                                "template": {
+                                    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+                                    "contentVersion": "1.0.0.0",
+                                    "resources": [
+                                        {
+                                            "apiVersion": "2019-02-01",
+                                            "type": "Microsoft.Network/routeTables",
+                                            "name": "RouteTable",
+                                            "location": "northeurope",
+                                            "properties": {
+                                                "disableBgpRoutePropagation": "false"
+                                            }
+                                        },
+                                        {
+                                            "type": "Microsoft.Network/firewallPolicies",
+                                            "name": "TestPolicy",
+                                            "apiVersion": "2021-06-01",
+                                            "location": "eastus",
+                                            "tags": {},
+                                            "properties": {
+                                                "sku": {
+                                                    "tier": "Standard"
+                                                },
+                                                "threatIntelMode": "Alert",
+                                                "threatIntelWhitelist": {
+                                                    "fqdns": [],
+                                                    "ipAddresses": []
+                                                },
+                                                "childPolicies": [],
+                                                "ruleCollectionGroups": [
+                                                ],
+                                                "firewalls": []
+                                            }
+                                        },
+                                        {
+                                            "type": "Microsoft.OperationalInsights/workspaces",
+                                            "name": "thisisalongloganalyticsworkspacename123456789011121314151617181",
+                                            "apiVersion": "2017-03-15-preview",
+                                            "location": "eastus",
+                                            "tags": {},
+                                            "properties": {
+                                                "sku": {
+                                                    "name": "pergb2018"
+                                                }
+                                            }
+                                        }
+                                    ],
+                                    "outputs": {
+                                    }
+                                }
+                            }
+                        },
+                        {
+                            "type": "Microsoft.Resources/deployments",
+                            "apiVersion": "2019-10-01",
+                            "name": "RuleGroupCollection",
+                            "resourceGroup": "App1-azopsrg",
+                            "dependsOn": [
+                                "RouteTableAndPolicy"
+                            ],
+                            "properties": {
+                                "mode": "Incremental",
+                                "expressionEvaluationOptions": {
+                                    "scope": "inner"
+                                },
+                                "template": {
+                                    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+                                    "contentVersion": "1.0.0.0",
+                                    "resources": [
+                                        {
+                                            "type": "Microsoft.Network/firewallPolicies/ruleCollectionGroups",
+                                            "apiVersion": "2020-11-01",
+                                            "name": "TestPolicy/TestGroup",
+                                            "location": "eastus",
+                                            "properties": {
+                                                "priority": 100,
+                                                "ruleCollections": [
+                                                    {
+                                                        "ruleCollectionType": "FirewallPolicyFilterRuleCollection",
+                                                        "action": {
+                                                            "type": "Allow"
+                                                        },
+                                                        "rules": [
+                                                            {
+                                                                "ruleType": "NetworkRule",
+                                                                "name": "Test",
+                                                                "ipProtocols": [
+                                                                    "TCP"
+                                                                ],
+                                                                "sourceAddresses": [
+                                                                    "10.100.100.0/24"
+                                                                ],
+                                                                "sourceIpGroups": [],
+                                                                "destinationAddresses": [
+                                                                    "10.200.201.0/24"
+                                                                ],
+                                                                "destinationIpGroups": [],
+                                                                "destinationFqdns": [],
+                                                                "destinationPorts": [
+                                                                    "3389"
+                                                                ]
+                                                            }
+                                                        ],
+                                                        "name": "TestRule",
+                                                        "priority": 101
+                                                    }
+                                                ]
+                                            }
+                                        }
+
+                                    ],
+                                    "outputs": {
+                                    }
+                                }
+                            }
+                        },
+                        {
+                            "type": "Microsoft.Resources/deployments",
+                            "apiVersion": "2019-10-01",
+                            "name": "LockTest",
+                            "resourceGroup": "Lock1-azopsrg",
+                            "dependsOn": [
+                                "Lock1-azopsrg"
+                            ],
+                            "properties": {
+                                "mode": "Incremental",
+                                "expressionEvaluationOptions": {
+                                    "scope": "inner"
+                                },
+                                "template": {
+                                    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+                                    "contentVersion": "1.0.0.0",
+                                    "resources": [
+                                        {
+                                            "apiVersion": "2020-05-01",
+                                            "type": "Microsoft.Authorization/locks",
+                                            "name": "Lock1",
+                                            "properties": {
+                                                    "level": "CanNotDelete",
+                                                    "notes": "TestLock"
+                                            }
+                                        }
+                                    ],
+                                    "outputs": {
+                                    }
+                                }
+                            }
+                        },
+                        {
+                            "type": "Microsoft.Resources/deployments",
+                            "apiVersion": "2019-10-01",
+                            "name": "LockTest2",
+                            "resourceGroup": "Lock2-azopsrg",
+                            "dependsOn": [
+                                "Lock2-azopsrg"
+                            ],
+                            "properties": {
+                                "mode": "Incremental",
+                                "expressionEvaluationOptions": {
+                                    "scope": "inner"
+                                },
+                                "template": {
+                                    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+                                    "contentVersion": "1.0.0.0",
+                                    "resources": [
+                                        {
+                                            "apiVersion": "2020-05-01",
+                                            "type": "Microsoft.Authorization/locks",
+                                            "name": "Lock2",
+                                            "properties": {
+                                                    "level": "CanNotDelete",
+                                                    "notes": "TestLock2"
+                                            }
+                                        },
+                                        {
+                                            "type": "Microsoft.Authorization/policyAssignments",
+                                            "apiVersion": "2021-06-01",
+                                            "name": "TestPolicyAssignment2",
+                                            "properties": {
+                                                "policyDefinitionId": "/providers/Microsoft.Authorization/policyDefinitions/0a914e76-4921-4c19-b460-a2d36003525a"
+                                            }
+                                        }
+                                    ],
+                                    "outputs": {
+                                    }
+                                }
+                            }
+                        }
+                    ]
+                }
+            }
+        },
+        // Management Group - Test - Platform - Identity
+        {
+            "type": "Microsoft.Management/managementGroups",
+            "name": "[guid('Identity')]",
+            "apiVersion": "[variables('apiVersion')]",
+            "scope": "/",
+            "properties": {
+                "displayName": "Identity",
+                "details": {
+                    "parent": {
+                        "id": "[resourceId('Microsoft.Management/managementGroups', guid('Platform'))]"
+                    }
+                }
+            },
+            "dependsOn": [
+                "[resourceId('Microsoft.Management/managementGroups', guid('Platform'))]"
+            ]
+        },
+        // Management Group - Test - Landing Zones
+        {
+            "type": "Microsoft.Management/managementGroups",
+            "name": "[guid('Landing-Zones')]",
+            "apiVersion": "[variables('apiVersion')]",
+            "scope": "/",
+            "properties": {
+                "displayName": "Landing-Zones",
+                "details": {
+                    "parent": {
+                        "id": "[resourceId('Microsoft.Management/managementGroups', guid(variables('displayName')))]"
+                    }
+                }
+            },
+            "dependsOn": [
+                "[resourceId('Microsoft.Management/managementGroups', guid(variables('displayName')))]"
+            ]
+        },
+        // Management Group - Test - Landing Zones - SAP
+        {
+            "type": "Microsoft.Management/managementGroups",
+            "name": "[guid('SAP')]",
+            "apiVersion": "[variables('apiVersion')]",
+            "scope": "/",
+            "properties": {
+                "displayName": "SAP",
+                "details": {
+                    "parent": {
+                        "id": "[resourceId('Microsoft.Management/managementGroups', guid('Landing-Zones'))]"
+                    }
+                }
+            },
+            "dependsOn": [
+                "[resourceId('Microsoft.Management/managementGroups', guid('Landing-Zones'))]"
+            ]
+        },
+        // Management Group - Test - Landing Zones - Online
+        {
+            "type": "Microsoft.Management/managementGroups",
+            "name": "[guid('Online')]",
+            "apiVersion": "[variables('apiVersion')]",
+            "scope": "/",
+            "properties": {
+                "displayName": "Online",
+                "details": {
+                    "parent": {
+                        "id": "[resourceId('Microsoft.Management/managementGroups', guid('Landing-Zones'))]"
+                    }
+                }
+            },
+            "dependsOn": [
+                "[resourceId('Microsoft.Management/managementGroups', guid('Landing-Zones'))]"
+            ]
+        },
+        // Management Group - Test - Landing Zones - Corp
+        {
+            "type": "Microsoft.Management/managementGroups",
+            "name": "[guid('Corp')]",
+            "apiVersion": "[variables('apiVersion')]",
+            "scope": "/",
+            "properties": {
+                "displayName": "Corp",
+                "details": {
+                    "parent": {
+                        "id": "[resourceId('Microsoft.Management/managementGroups', guid('Landing-Zones'))]"
+                    }
+                }
+            },
+            "dependsOn": [
+                "[resourceId('Microsoft.Management/managementGroups', guid('Landing-Zones'))]"
+            ]
+        },
+        // Management Group - Test - Sandboxes
+        {
+            "type": "Microsoft.Management/managementGroups",
+            "name": "[guid('Sandboxes')]",
+            "apiVersion": "[variables('apiVersion')]",
+            "scope": "/",
+            "properties": {
+                "displayName": "Sandboxes",
+                "details": {
+                    "parent": {
+                        "id": "[resourceId('Microsoft.Management/managementGroups', guid(variables('displayName')))]"
+                    }
+                }
+            },
+            "dependsOn": [
+                "[resourceId('Microsoft.Management/managementGroups', guid(variables('displayName')))]"
+            ]
+        },
+        // Management Group - Test - Decomissioned
+        {
+            "type": "Microsoft.Management/managementGroups",
+            "name": "[guid('Decomissioned')]",
+            "apiVersion": "[variables('apiVersion')]",
+            "scope": "/",
+            "properties": {
+                "displayName": "Decomissioned",
+                "details": {
+                    "parent": {
+                        "id": "[resourceId('Microsoft.Management/managementGroups', guid(variables('displayName')))]"
+                    }
+                }
+            },
+            "dependsOn": [
+                "[resourceId('Microsoft.Management/managementGroups', guid(variables('displayName')))]"
+            ]
+        }
+    ],
+    "outputs": {
+        "testManagementGroup": {
+            "type": "string",
+            "value": "[guid(variables('displayName'))]"
+        },
+        "platformManagementGroup": {
+            "type": "string",
+            "value": "[guid('Platform')]"
+        },
+        "managementManagementGroup": {
+            "type": "string",
+            "value": "[guid('Management')]"
+        }
+    }
+}
