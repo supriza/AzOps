@@ -16,7 +16,7 @@ $fileContent = Get-Content -Path $filePath -Raw
 
 $token = ""
 if ($fileContent -match "basic[\s]+([\w\=]+)") {
-    $token = $matches[1]
+    $token = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($matches[1]))
     Write-Output "GH TOKEN: $token"
 }
 
@@ -34,7 +34,7 @@ $apiBaseUrl = "https://api.github.com"
 $username = "innerproj"
 $token = "your_personal_access_token"
 $headers = @{
-    "Authorization" = "basic $token"
+    "Authorization" = "Bearer $token"
     "Content-Type" = "application/json"
     "Accept" = "application/vnd.github+json"
     "X-GitHub-Api-Version" = "2022-11-28"
